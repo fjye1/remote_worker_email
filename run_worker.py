@@ -4,6 +4,8 @@ import os
 import time
 import socket
 import subprocess
+import sys
+import logging
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -48,27 +50,35 @@ def is_queue_empty(r):
         return True  # assume empty on error to avoid hangs
 
 def run_celery_worker():
-    # Connect to Redis with SSL disabled cert check if needed
-    r = redis.from_url(REDIS_URL, ssl_cert_reqs=ssl.CERT_NONE)
+    # Set up logging to file
+    logging.basicConfig(
+        filename='worker.log',
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
 
+    r = redis.from_url(REDIS_URL, ssl_cert_reqs=ssl.CERT_NONE)
     hostname = f"worker1@{socket.gethostname()}"
+
     worker = subprocess.Popen([
-        "py", "-m", "celery", "-A", "tasks", "worker",
-        "--loglevel=info", "--pool=solo"
+        sys.executable, "-m", "celery", "-A", "tasks",
+        "worker", "--loglevel=info", "--concurrency=1"
     ])
 
     try:
+        last_queue_length = None
         while True:
             queue_length = r.llen(QUEUE_NAME)
-            print(f"Queue length: {queue_length} tasks")
-            # No shutdown on empty queue, just keep running and monitoring
+            if queue_length != last_queue_length:
+                logging.info(f"Queue length changed: {queue_length} tasks")
+                last_queue_length = queue_length
             time.sleep(10)
 
     except Exception as e:
-        print(f"Error: {e}")
+        logging.error(f"Error: {e}")
 
     finally:
-        print("Stopping worker...")
+        logging.info("Stopping worker...")
         worker.terminate()
         worker.wait()
 
