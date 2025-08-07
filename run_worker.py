@@ -87,5 +87,11 @@ def run_celery_worker():
 # --- Main Routine ---
 if __name__ == "__main__":
     wait_for_wifi()
-    run_celery_worker()
+
+    while True:
+        try:
+            run_celery_worker()
+        except Exception as e:
+            logging.error(f"Worker crashed: {e}")
+            time.sleep(5)  # Wait before retrying
 
