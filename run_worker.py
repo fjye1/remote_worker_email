@@ -1,26 +1,22 @@
-import ssl
-import redis
-import os
 import time
 import socket
-import subprocess
-import sys
-import logging
-
+import functions
 from dotenv import load_dotenv
-load_dotenv()
-REDIS_URL = os.getenv("REDIS_URL")
-QUEUE_NAME = "celery"
+import os
+from sqlalchemy import create_engine, select, delete
+from sqlalchemy.orm import sessionmaker
+import psycopg2
+from models import Tasks
 
 load_dotenv()
 
-# --- Settings ---
+RENDER_DATABASE_URL = os.getenv("RENDER_DATABASE_URL")
+
+engine = create_engine(RENDER_DATABASE_URL)
+Session = sessionmaker(bind=engine)
+session = Session()
+
 WIFI_WAIT_SECONDS = 120
-CELERY_TIMEOUT_SECONDS = 60 * 5  # Time to allow Celery to run
-REDIS_QUEUE_CHECK_COMMAND = "celery -A tasks inspect active"
-
-# --- Helpers ---
-
 
 def is_connected(host="8.8.8.8", port=53, timeout=3):
     """Check if we have internet (assumes Wi-Fi is ready)."""
@@ -40,58 +36,54 @@ def wait_for_wifi():
         time.sleep(1)
     print("Wi-Fi not detected. Continuing anyway.")
 
-def is_queue_empty(r):
-    try:
-        length = r.llen(QUEUE_NAME)
-        print(f"Queue length: {length}")
-        return length == 0
-    except Exception as e:
-        print(f"Redis error checking queue length: {e}")
-        return True  # assume empty on error to avoid hangs
 
-def run_celery_worker():
-    # Set up logging to file
-    logging.basicConfig(
-        filename='worker.log',
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
-
-    r = redis.from_url(REDIS_URL, ssl_cert_reqs=ssl.CERT_NONE)
-    hostname = f"worker1@{socket.gethostname()}"
-
-    worker = subprocess.Popen([
-        sys.executable, "-m", "celery", "-A", "tasks",
-        "worker", "--loglevel=info", "--concurrency=1"
-    ])
-
-    try:
-        last_queue_length = None
-        while True:
-            queue_length = r.llen(QUEUE_NAME)
-            if queue_length != last_queue_length:
-                logging.info(f"Queue length changed: {queue_length} tasks")
-                last_queue_length = queue_length
-            time.sleep(10)
-
-    except Exception as e:
-        logging.error(f"Error: {e}")
-
-    finally:
-        logging.info("Stopping worker...")
-        worker.terminate()
-        worker.wait()
-
-
-
-# --- Main Routine ---
-if __name__ == "__main__":
-    wait_for_wifi()
-
+try:
     while True:
-        try:
-            run_celery_worker()
-        except Exception as e:
-            logging.error(f"Worker crashed: {e}")
-            time.sleep(5)  # Wait before retrying
+        # Grab one pending task
+        task = session.execute(
+            select(Tasks)
+            .where(Tasks.status == Tasks.TaskStatus.PENDING)
+            .limit(1)
+            .with_for_update(skip_locked=True)
+        ).scalar_one_or_none()
+
+        if not task:
+            # No more pending tasks → exit
+            break
+
+        # Mark as in-progress
+        task.status = Tasks.TaskStatus.IN_PROGRESS
+        session.commit()
+
+        print(f"Running task: {task.task_name} with args: {task.arg1}, {task.arg2}, {task.arg3}")
+
+        # === Run the actual task here ===
+        # Example:
+        if task.task_name == "send_invoice":
+            functions.send_invoice(task.arg1, task.arg2)
+        elif task.task_name == "send_tracking":
+            functions.send_tracking(task.arg1, task.arg2, task.arg3)
+
+        # Delete task after completion (ORM way)
+        session.delete(task)
+        session.commit()
+
+except Exception as e:
+    session.rollback()
+    print(f"[Worker Error]: {e}")
+finally:
+    session.close()
+
+#Tracking
+# new_task = Tasks(
+#             task_name="send_tracking",
+#             arg1=order.order_id,
+#             arg2=order.user.email,
+#             arg3=order.tracking_number
+
+#invoice
+# new_task = Tasks(
+#             task_name="send_invoice",
+#             arg1=order.order_id,
+#             arg2=order.user.email
 

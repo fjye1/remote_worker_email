@@ -1,11 +1,8 @@
 import os
 import smtplib
-import ssl
 import time
 import io
 from email.message import EmailMessage
-
-from celery import Celery
 from xhtml2pdf import pisa
 import requests
 from dotenv import load_dotenv
@@ -14,16 +11,9 @@ load_dotenv()
 
 SECRET = os.getenv("SECRET")
 SECRET_URL = os.getenv("SECRET_URL")
-REDIS_URL = os.getenv("REDIS_URL")
 
-# ----------------------------
-# Celery connection
-# ----------------------------
-celery = Celery('tasks', broker=REDIS_URL, backend=REDIS_URL)
 
-# Keep your current SSL disable for now
-celery.conf.broker_use_ssl = {'ssl_cert_reqs': ssl.CERT_NONE}
-celery.conf.redis_backend_use_ssl = {'ssl_cert_reqs': ssl.CERT_NONE}
+
 
 # ----------------------------
 # Wait for invoice HTML
@@ -98,7 +88,7 @@ def send_email(user_email, subject, body, pdf=None, pdf_filename=None):
 # ----------------------------
 # Send invoice email
 # ----------------------------
-@celery.task(name='tasks.send_invoice_email_task')
+
 def send_invoice(order_id, user_email, pdf_filename=None):
     """Generate PDF for given order and send it via email."""
     pdf = generate_invoice(order_id)
@@ -120,7 +110,7 @@ def send_invoice(order_id, user_email, pdf_filename=None):
 # ----------------------------
 # Send tracking email
 # ----------------------------
-@celery.task(name='tasks.send_tracking_email_task')
+
 def send_tracking(order_id, user_email, tracking_number, body=None):
     """Send tracking email with invoice attached."""
     pdf = generate_invoice(order_id)
