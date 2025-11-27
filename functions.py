@@ -3,9 +3,11 @@ import smtplib
 import time
 import io
 from email.message import EmailMessage
-from xhtml2pdf import pisa
+import pdfkit
 import requests
 from dotenv import load_dotenv
+
+#TODO add wkhtmltopdf to path on server for this to run
 
 load_dotenv()
 
@@ -35,6 +37,7 @@ def wait_for_invoice(order_id, timeout=10, wait_seconds=4 * 60, max_attempts=30)
             print(f"[Invoice Wait] Request failed: {e}, retrying in {wait_seconds//60} mins...")
 
         time.sleep(wait_seconds)
+    print(url)
 
     print("[Invoice Wait] Max attempts reached. Giving up.")
     return None
@@ -43,17 +46,20 @@ def wait_for_invoice(order_id, timeout=10, wait_seconds=4 * 60, max_attempts=30)
 # Generate PDF from HTML
 # ----------------------------
 def generate_invoice(order_id):
-    """Wait for invoice page to be available, then return PDF bytes."""
-    invoice_html = wait_for_invoice(order_id)
+    """Generate PDF invoice using pdfkit / wkhtmltopdf."""
+    invoice_html = wait_for_invoice(order_id)  # your existing function
     if not invoice_html:
         return None
 
-    with io.BytesIO() as pdf_stream:
-        pisa_status = pisa.CreatePDF(invoice_html, dest=pdf_stream)
-        if pisa_status.err:
-            print("[PDF Generation] Error creating PDF.")
-            return None
-        return pdf_stream.getvalue()
+    try:
+        # You can provide configuration if wkhtmltopdf is not in PATH
+        config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
+
+        pdf_bytes = pdfkit.from_string(invoice_html, False, configuration=config)
+        return pdf_bytes
+    except Exception as e:
+        print(f"[PDF Generation] Error creating PDF: {e}")
+        return None
 
 # ----------------------------
 # Email sending helper
