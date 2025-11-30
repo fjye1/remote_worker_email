@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SECRET = os.getenv("SECRET")
-SECRET_URL = os.getenv("SECRET_URL")
+SECRET_URL = os.getenv("SECRET_URL2")
 
 
 
@@ -52,8 +52,8 @@ def generate_invoice(order_id):
         return None
 
     try:
-        # You can provide configuration if wkhtmltopdf is not in PATH
-        config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
+        # Linux path to wkhtmltopdf
+        config = pdfkit.configuration(wkhtmltopdf='/usr/bin/wkhtmltopdf')
 
         pdf_bytes = pdfkit.from_string(invoice_html, False, configuration=config)
         return pdf_bytes
