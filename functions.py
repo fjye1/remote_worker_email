@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SECRET = os.getenv("SECRET")
-SECRET_URL = os.getenv("SECRET_URL2")
+SECRET_URL = os.getenv("SECRET_URL")
 
 
 
