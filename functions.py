@@ -67,12 +67,13 @@ def generate_invoice(order_id):
 def send_email(user_email, subject, body, pdf=None, pdf_filename=None):
     """Send an email with optional PDF attachment."""
     try:
-        CHOC_EMAIL = os.getenv("CHOC_EMAIL")
-        CHOC_PASSWORD = os.getenv("CHOC_PASSWORD")
+        LOGIN_EMAIL = os.getenv("CHOC_EMAIL")  # name@domain.com
+        APP_PASSWORD = os.getenv("CHOC_PASSWORD")
+        FROM_EMAIL = "no-reply@regalchocolate.in"  # Your alias
 
         msg = EmailMessage()
         msg["Subject"] = subject
-        msg["From"] = "no-reply@regalchocolate.in"
+        msg["From"] = FROM_EMAIL  # Use the alias
         msg["To"] = user_email
         msg.set_content(body)
 
@@ -80,8 +81,10 @@ def send_email(user_email, subject, body, pdf=None, pdf_filename=None):
             filename = pdf_filename or "attachment.pdf"
             msg.add_attachment(pdf, maintype="application", subtype="pdf", filename=filename)
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(CHOC_EMAIL, CHOC_PASSWORD)
+        # Use port 587 with STARTTLS (like your working snippet)
+        with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
+            smtp.starttls()
+            smtp.login(LOGIN_EMAIL, APP_PASSWORD)  # Login with primary account
             smtp.send_message(msg)
 
         print("[Email] Sent successfully.")
@@ -90,7 +93,6 @@ def send_email(user_email, subject, body, pdf=None, pdf_filename=None):
     except Exception as e:
         print(f"[Email Error]: {e}")
         return False
-
 # ----------------------------
 # Send invoice email
 # ----------------------------
