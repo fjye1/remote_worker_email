@@ -72,7 +72,7 @@ def send_email(user_email, subject, body, pdf=None, pdf_filename=None):
 
         msg = EmailMessage()
         msg["Subject"] = subject
-        msg["From"] = CHOC_EMAIL
+        msg["From"] = "no-reply@regalchocolate.in"
         msg["To"] = user_email
         msg.set_content(body)
 
