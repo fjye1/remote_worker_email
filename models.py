@@ -26,3 +26,10 @@ class Tasks(Base):
     # optional helper
     def set_status(self, status):
         self.status = status
+
+class Orders(Base):
+    __tablename__ = "orders"
+
+    order_id = Column(String(20), primary_key=True)
+    order_date = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    invoice_path = Column(String(255), nullable=True)

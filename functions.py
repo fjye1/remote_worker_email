@@ -6,14 +6,33 @@ from email.message import EmailMessage
 import pdfkit
 import requests
 from dotenv import load_dotenv
-
+from datetime import datetime
+from models import Orders
+from database import Session
+import platform
 #TODO add wkhtmltopdf to path on server for this to run
 
 load_dotenv()
 
 SECRET = os.getenv("SECRET")
 SECRET_URL = os.getenv("SECRET_URL3")
+# ----------------------------
+# System Detection helper
+# ----------------------------
 
+def get_pdfkit_config():
+    """Return a pdfkit configuration object depending on OS."""
+    system = platform.system()
+
+    if system == "Windows":
+        wkhtmltopdf_path = os.getenv("WINDOWS_PATH")
+    else:
+        wkhtmltopdf_path = os.getenv("LINUX_PATH")
+
+    if not wkhtmltopdf_path or not os.path.exists(wkhtmltopdf_path):
+        raise FileNotFoundError(f"wkhtmltopdf not found at {wkhtmltopdf_path}")
+
+    return pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
 
 
 
@@ -45,20 +64,69 @@ def wait_for_invoice(order_id, timeout=10, wait_seconds=4 * 60, max_attempts=30)
 # ----------------------------
 # Generate PDF from HTML
 # ----------------------------
+# def generate_invoice(order_id):
+#     """Generate PDF invoice using pdfkit / wkhtmltopdf."""
+#     invoice_html = wait_for_invoice(order_id)  # your existing function
+#     if not invoice_html:
+#         return None
+#
+#     try:
+#         # Linux path to wkhtmltopdf
+#         config = pdfkit.configuration(wkhtmltopdf='/usr/bin/wkhtmltopdf')
+#
+#         pdf_bytes = pdfkit.from_string(invoice_html, False, configuration=config)
+#         return pdf_bytes
+#     except Exception as e:
+#         print(f"[PDF Generation] Error creating PDF: {e}")
+#         return None
+# ----------------------------
+# Updated PDF generation save locally commit path to DB
+# ----------------------------
 def generate_invoice(order_id):
-    """Generate PDF invoice using pdfkit / wkhtmltopdf."""
+    session = Session()  # create a DB session
+    """Generate PDF invoice, save to local archive, update order.invoice_path, return file path."""
+    # Load the order
+    order = session.query(Orders).filter_by(order_id=order_id).first()
+    if not order:
+        print(f"[PDF Generation] Order {order_id} not found")
+        return None
+
+    # Get HTML for invoice
     invoice_html = wait_for_invoice(order_id)  # your existing function
     if not invoice_html:
+        print(f"[PDF Generation] Invoice HTML not ready for order {order_id}")
         return None
 
     try:
-        # Linux path to wkhtmltopdf
-        config = pdfkit.configuration(wkhtmltopdf='/usr/bin/wkhtmltopdf')
 
-        pdf_bytes = pdfkit.from_string(invoice_html, False, configuration=config)
-        return pdf_bytes
+        config = get_pdfkit_config()
+
+
+        # Define path to save invoice
+        base_dir = "/archives/invoices"  # adjust to your local archive folder
+        # Use the order's actual date to determine folder structure
+        order_date = order.order_date or datetime.utcnow()  # fallback in case it's missing
+        year = order_date.strftime("%Y")
+        month = order_date.strftime("%m")
+        folder = os.path.join(base_dir, year, month)
+        os.makedirs(folder, exist_ok=True)
+
+        filename = f"INV-{order_id}.pdf"
+        file_path = os.path.join(folder, filename)
+
+        # Generate PDF and save
+        pdfkit.from_string(invoice_html, file_path, configuration=config)
+
+        # Update the order in the database
+        order.invoice_path = file_path
+        session.commit()
+
+        print(f"[PDF Generation] Invoice saved for order {order_id} at {file_path}")
+        return file_path
+
     except Exception as e:
-        print(f"[PDF Generation] Error creating PDF: {e}")
+        print(f"[PDF Generation] Error creating PDF for order {order_id}: {e}")
+        session.rollback()
         return None
 
 # ----------------------------
@@ -141,3 +209,6 @@ def send_tracking(order_id, user_email, tracking_number, body=None):
         pdf=pdf,
         pdf_filename=f"Invoice_{order_id}.pdf"
     )
+
+
+generate_invoice("ORD1767531974")
