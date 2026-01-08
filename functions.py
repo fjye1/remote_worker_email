@@ -82,8 +82,8 @@ def wait_for_invoice(order_id, timeout=10, wait_seconds=4 * 60, max_attempts=30)
 # ----------------------------
 # Updated PDF generation save locally commit path to DB
 # ----------------------------
-def generate_invoice(order_id):
-    session = Session()  # create a DB session
+def generate_invoice(order_id,session):
+
     """Generate PDF invoice, save to local archive, update order.invoice_path, return file path."""
     # Load the order
     order = session.query(Orders).filter_by(order_id=order_id).first()
