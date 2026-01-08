@@ -187,13 +187,29 @@ def send_invoice(order_id, user_email, pdf_filename=None):
 # Send tracking email
 # ----------------------------
 
-def send_tracking(order_id, user_email, tracking_number, body=None):
-    """Send tracking email with invoice attached."""
-    pdf = generate_invoice(order_id)
-    if not pdf:
-        print("[Send Tracking Error]: Could not generate invoice PDF.")
+def send_tracking(order_id, user_email, tracking_number, body=None, session=None):
+    """Send tracking email with existing invoice attached."""
+
+    # Load the order
+    order = session.query(Orders).filter_by(order_id=order_id).first()
+    if not order:
+        print(f"[Send Tracking Error]: Order {order_id} not found in DB.")
         return False
 
+    # Check if invoice exists
+    if not order.invoice_path or not os.path.exists(order.invoice_path):
+        print(f"[Send Tracking Error]: Invoice file not found for order {order_id}.")
+        return False
+
+    # Read PDF bytes from file
+    try:
+        with open(order.invoice_path, "rb") as f:
+            pdf = f.read()
+    except Exception as e:
+        print(f"[Send Tracking Error]: Could not read invoice file: {e}")
+        return False
+
+    # Default email body
     subject = f"Your Order Has Shipped - Tracking: {tracking_number}"
     if body is None:
         body = (
@@ -202,6 +218,7 @@ def send_tracking(order_id, user_email, tracking_number, body=None):
             "Your invoice is attached.\n\nThanks for shopping with us!"
         )
 
+    # Send email with PDF attached
     return send_email(
         user_email=user_email,
         subject=subject,
@@ -211,4 +228,4 @@ def send_tracking(order_id, user_email, tracking_number, body=None):
     )
 
 
-generate_invoice("ORD1767531974")
+# generate_invoice("ORD1767531974")
