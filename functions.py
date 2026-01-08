@@ -165,16 +165,33 @@ def send_email(user_email, subject, body, pdf=None, pdf_filename=None):
 # Send invoice email
 # ----------------------------
 
-def send_invoice(order_id, user_email, pdf_filename=None):
-    """Generate PDF for given order and send it via email."""
-    pdf = generate_invoice(order_id)
-    if not pdf:
-        print("[Send Invoice Error]: Could not generate invoice PDF.")
+def send_invoice(order_id, user_email, pdf_filename=None, session=None):
+    """Send existing invoice PDF for given order via email."""
+
+    # Load the order
+    order = session.query(Orders).filter_by(order_id=order_id).first()
+    if not order:
+        print(f"[Send Invoice Error]: Order {order_id} not found in DB.")
         return False
 
+    # Check if invoice exists
+    if not order.invoice_path or not os.path.exists(order.invoice_path):
+        print(f"[Send Invoice Error]: Invoice file not found for order {order_id}.")
+        return False
+
+    # Read PDF bytes from file
+    try:
+        with open(order.invoice_path, "rb") as f:
+            pdf = f.read()
+    except Exception as e:
+        print(f"[Send Invoice Error]: Could not read invoice file: {e}")
+        return False
+
+    # Email content
     subject = f"Your Invoice - {order_id}"
     body = "Thanks for your order! Your invoice is attached."
 
+    # Send email
     return send_email(
         user_email=user_email,
         subject=subject,
@@ -182,7 +199,6 @@ def send_invoice(order_id, user_email, pdf_filename=None):
         pdf=pdf,
         pdf_filename=pdf_filename or f"Invoice_{order_id}.pdf"
     )
-
 # ----------------------------
 # Send tracking email
 # ----------------------------
