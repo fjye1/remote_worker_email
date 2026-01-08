@@ -41,7 +41,6 @@ try:
             .limit(1)
             .with_for_update(skip_locked=True)
         ).scalar_one_or_none()
-
         if not task:
             # No more pending tasks → exit
             break
@@ -55,9 +54,9 @@ try:
         # === Run the actual task here ===
         # Example:
         if task.task_name == "send_invoice":
-            functions.send_invoice(task.arg1, task.arg2)
+            functions.send_invoice(task.arg1, task.arg2, session=session)
         elif task.task_name == "send_tracking":
-            functions.send_tracking(task.arg1, task.arg2, task.arg3)
+            functions.send_tracking(task.arg1, task.arg2, task.arg3, session=session)
 
         # Delete task after completion (ORM way)
         session.delete(task)

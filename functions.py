@@ -166,7 +166,12 @@ def send_email(user_email, subject, body, pdf=None, pdf_filename=None):
 # ----------------------------
 
 def send_invoice(order_id, user_email, pdf_filename=None, session=None):
-    """Send existing invoice PDF for given order via email."""
+    """Send invoice PDF. Generate it first if it does not exist."""
+
+
+    if session is None:
+        print("[Send Invoice Error]: No DB session provided.")
+        return False
 
     # Load the order
     order = session.query(Orders).filter_by(order_id=order_id).first()
@@ -174,10 +179,15 @@ def send_invoice(order_id, user_email, pdf_filename=None, session=None):
         print(f"[Send Invoice Error]: Order {order_id} not found in DB.")
         return False
 
-    # Check if invoice exists
+    # Generate invoice if missing
     if not order.invoice_path or not os.path.exists(order.invoice_path):
-        print(f"[Send Invoice Error]: Invoice file not found for order {order_id}.")
-        return False
+        print(f"[Send Invoice] Invoice missing for {order_id}, generating now...")
+        file_path = generate_invoice(order_id, session=session)
+        if not file_path:
+            print(f"[Send Invoice] Failed to generate invoice for {order_id}.")
+            return False
+        order.invoice_path = file_path
+        session.commit()
 
     # Read PDF bytes from file
     try:
@@ -244,4 +254,3 @@ def send_tracking(order_id, user_email, tracking_number, body=None, session=None
     )
 
 
-# generate_invoice("ORD1767531974")
