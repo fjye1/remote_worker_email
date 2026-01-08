@@ -103,7 +103,7 @@ def generate_invoice(order_id,session):
 
 
         # Define path to save invoice
-        base_dir = "/archives/invoices"  # adjust to your local archive folder
+        base_dir = "/home/frede/archives/invoices"  # adjust to your local archive folder
         # Use the order's actual date to determine folder structure
         order_date = order.order_date or datetime.utcnow()  # fallback in case it's missing
         year = order_date.strftime("%Y")
