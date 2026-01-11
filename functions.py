@@ -42,33 +42,33 @@ def get_pdfkit_config():
 # Wait for invoice HTML
 # ----------------------------
 
-def wait_for_invoice(order_id, timeout=10, wait_seconds=4 * 60, max_attempts=30):
-    """
-    Poll the invoice URL until it returns 200 or max_attempts reached.
-    Returns HTML string or None if not available.
-    """
-    url = f"{SECRET_URL}/{order_id}"
-
-    headers = {
-        "Authorization": f"Bearer {INTERNAL_API_TOKEN}"
-    }
-
-    for attempt in range(max_attempts):
-        try:
-            response = requests.get(url, headers=headers, timeout=timeout)
-
-            if response.status_code == 200:
-                return response.text
-            else:
-                print(f"[Invoice Wait] Got {response.status_code}, retrying in {wait_seconds//60} mins...")
-
-        except requests.RequestException as e:
-            print(f"[Invoice Wait] Request failed: {e}, retrying in {wait_seconds//60} mins...")
-
-        time.sleep(wait_seconds)
-
-    print("[Invoice Wait] Max attempts reached. Giving up.")
-    return None
+# def wait_for_invoice(order_id, timeout=10, wait_seconds=4 * 60, max_attempts=30):
+#     """
+#     Poll the invoice URL until it returns 200 or max_attempts reached.
+#     Returns HTML string or None if not available.
+#     """
+#     url = f"{SECRET_URL}/{order_id}"
+#
+#     headers = {
+#         "Authorization": f"Bearer {INTERNAL_API_TOKEN}"
+#     }
+#
+#     for attempt in range(max_attempts):
+#         try:
+#             response = requests.get(url, headers=headers, timeout=timeout)
+#
+#             if response.status_code == 200:
+#                 return response.text
+#             else:
+#                 print(f"[Invoice Wait] Got {response.status_code}, retrying in {wait_seconds//60} mins...")
+#
+#         except requests.RequestException as e:
+#             print(f"[Invoice Wait] Request failed: {e}, retrying in {wait_seconds//60} mins...")
+#
+#         time.sleep(wait_seconds)
+#
+#     print("[Invoice Wait] Max attempts reached. Giving up.")
+#     return None
 # ----------------------------
 # Return Internal Invoice JSON
 # ----------------------------
