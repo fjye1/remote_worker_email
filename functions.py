@@ -1,22 +1,23 @@
 import os
+import platform
 import smtplib
 import time
-import io
+from datetime import datetime
 from email.message import EmailMessage
+
 import pdfkit
 import requests
 from dotenv import load_dotenv
-from datetime import datetime
-from models import Orders
-from database import Session
-import platform
 
-#TODO add wkhtmltopdf to path on server for this to run
+from models import Orders
+
+# TODO add wkhtmltopdf to path on server for this to run
 
 load_dotenv()
 
 INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN")
 SECRET_URL = os.getenv("SECRET_URL3")
+
 
 # ----------------------------
 # System Detection helper
@@ -35,7 +36,6 @@ def get_pdfkit_config():
         raise FileNotFoundError(f"wkhtmltopdf not found at {wkhtmltopdf_path}")
 
     return pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-
 
 
 # ----------------------------
@@ -104,8 +104,9 @@ def get_internal_invoice_JSON(order_id, timeout=10, wait_seconds=4 * 60, max_att
     print(f"[Invoice Wait] Max attempts ({max_attempts}) reached for order {order_id}. Giving up.")
     return None
 
+
 # ----------------------------
-# Email Builder
+# Send invoice body
 # ----------------------------
 def build_invoice_email(invoice):
     """Build HTML email body from internal invoice JSON that matches the site design."""
@@ -222,11 +223,11 @@ def build_invoice_email(invoice):
     </html>
     """
 
+
 # ----------------------------
 # Generate and save the PDF invoice
 # ----------------------------
 def generate_invoice_PDF(order_id, session):
-
     """Generate PDF invoice, save to local archive, update order.invoice_path, return file path."""
     # Load the order
     order = session.query(Orders).filter_by(order_id=order_id).first()
@@ -235,8 +236,8 @@ def generate_invoice_PDF(order_id, session):
         return None
 
     # Get HTML for invoice
-    invoice =get_internal_invoice_JSON(order_id)
-    invoice_html = build_invoice_email(invoice) # your existing function
+    invoice = get_internal_invoice_JSON(order_id)
+    invoice_html = build_invoice_email(invoice)  # your existing function
     if not invoice_html:
         print(f"[PDF Generation] Invoice HTML not ready for order {order_id}")
         return None
@@ -244,7 +245,6 @@ def generate_invoice_PDF(order_id, session):
     try:
 
         config = get_pdfkit_config()
-
 
         # Define path to save invoice
 
@@ -273,8 +273,6 @@ def generate_invoice_PDF(order_id, session):
         print(f"[PDF Generation] Error creating PDF for order {order_id}: {e}")
         session.rollback()
         return None
-
-
 
 
 # ----------------------------
@@ -314,6 +312,8 @@ def send_email(user_email, subject, body, pdf=None, pdf_filename=None):
     except Exception as e:
         print(f"[Email Error]: {e}")
         return False
+
+
 # ----------------------------
 # Send invoice email
 # ----------------------------
@@ -372,11 +372,115 @@ def send_invoice(order_id, user_email, pdf_filename=None, session=None):
         pdf=pdf,
         pdf_filename=pdf_filename or f"Invoice_{order_id}.pdf"
     )
+
+
+# ----------------------------
+# Send tracking body
+# ----------------------------
+def build_tracking_email(order_id, tracking_number, carrier="India Post", tracking_url=None):
+    """Build HTML email body for shipping notification with tracking."""
+
+    # Auto-generate tracking URL if not provided
+    if not tracking_url:
+        tracking_url = f"https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx?consignmentno={tracking_number}"
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+                    margin: 0; padding: 20px; background-color: #f8f9fa;">
+
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; 
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #afc08f 0%, #FCE7A3 100%); padding: 40px 30px; text-align: center;">
+            <div style="background: white; width: 80px; height: 80px; margin: 0 auto 20px; border-radius: 50%; 
+                        display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#afc08f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+</svg>
+            </div>
+            <h1 style="margin: 0; font-size: 28px; font-weight: 600; color: #2d3748;">Your Order Has Shipped!</h1>
+            <p style="margin: 12px 0 0 0; font-size: 16px; color: #4a5568;">Your package is on its way</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 40px 30px;">
+
+            <!-- Order Info -->
+            <div style="text-align: center; margin-bottom: 32px;">
+              <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Order Number</p>
+              <p style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">{order_id}</p>
+            </div>
+
+            <!-- Tracking Card -->
+            <div style="background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+                  Tracking Number
+                </p>
+                <p style="margin: 0; font-size: 20px; font-weight: 700; color: #1f2937; font-family: 'Courier New', monospace;">
+                  {tracking_number}
+                </p>
+              </div>
+
+              <div style="text-align: center; margin-bottom: 20px;">
+                <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                  <strong>Carrier:</strong> {carrier}
+                </p>
+              </div>
+
+              <!-- Track Button -->
+              <div style="text-align: center;">
+                <a href="{tracking_url}" 
+                   style="display: inline-block; background: linear-gradient(135deg, #afc08f 0%, #9fb080 100%); 
+                          color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; 
+                          font-weight: 600; font-size: 16px; box-shadow: 0 2px 8px rgba(175,192,143,0.3);">
+                  Track Your Package
+                </a>
+              </div>
+            </div>
+
+            <!-- Delivery Info -->
+            <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
+              <p style="margin: 0; color: #065f46; font-size: 14px; line-height: 1.6;">
+                <strong>📦 What's next?</strong><br>
+                Your package is now with our delivery partner. You'll receive updates as it moves through the shipping process.
+              </p>
+            </div>
+
+            <!-- Support -->
+            <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                Questions about your order?<br>
+                <a href="mailto:support@regalchocolate.in" style="color: #afc08f; text-decoration: none; font-weight: 600;">
+                  Contact Support
+                </a>
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+
+      </body>
+    </html>
+    """
+
+
 # ----------------------------
 # Send tracking email
 # ----------------------------
 
-def send_tracking(order_id, user_email, tracking_number, body=None, session=None):
+def send_tracking(order_id, user_email, tracking_number, tracking_url=None, body=None, session=None):
+    #TODO update the arguments coming from the task service to include a Tracking URL
     """Send tracking email with existing invoice attached."""
 
     # Load the order
@@ -386,9 +490,15 @@ def send_tracking(order_id, user_email, tracking_number, body=None, session=None
         return False
 
     # Check if invoice exists
+    # Generate invoice if missing
     if not order.invoice_path or not os.path.exists(order.invoice_path):
-        print(f"[Send Tracking Error]: Invoice file not found for order {order_id}.")
-        return False
+        print(f"[Send Invoice] Invoice missing for {order_id}, generating now...")
+        file_path = generate_invoice_PDF(order_id, session=session)
+        if not file_path:
+            print(f"[Send Invoice] Failed to generate invoice for {order_id}.")
+            return False
+        order.invoice_path = file_path
+        session.commit()
 
     # Read PDF bytes from file
     try:
@@ -401,11 +511,7 @@ def send_tracking(order_id, user_email, tracking_number, body=None, session=None
     # Default email body
     subject = f"Your Order Has Shipped - Tracking: {tracking_number}"
     if body is None:
-        body = (
-            f"Hi,\n\nYour order {order_id} has been shipped!\n"
-            f"Tracking number: {tracking_number}\n\n"
-            "Your invoice is attached.\n\nThanks for shopping with us!"
-        )
+        body = build_tracking_email(order_id, tracking_number)
 
     # Send email with PDF attached
     return send_email(
@@ -415,5 +521,3 @@ def send_tracking(order_id, user_email, tracking_number, body=None, session=None
         pdf=pdf,
         pdf_filename=f"Invoice_{order_id}.pdf"
     )
-
-
