@@ -14,7 +14,7 @@ import platform
 
 load_dotenv()
 
-SECRET = os.getenv("SECRET")
+INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN")
 SECRET_URL = os.getenv("SECRET_URL3")
 # ----------------------------
 # System Detection helper
@@ -48,7 +48,7 @@ def wait_for_invoice(order_id, timeout=10, wait_seconds=4 * 60, max_attempts=30)
     url = f"{SECRET_URL}/{order_id}"
 
     headers = {
-        "Authorization": f"Bearer {SECRET}"
+        "Authorization": f"Bearer {INTERNAL_API_TOKEN}"
     }
 
     for attempt in range(max_attempts):
