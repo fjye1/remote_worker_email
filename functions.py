@@ -400,13 +400,13 @@ def build_tracking_email(order_id, tracking_number, carrier="India Post", tracki
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #afc08f 0%, #FCE7A3 100%); padding: 40px 30px; text-align: center;">
             <div style="background: white; width: 80px; height: 80px; margin: 0 auto 20px; border-radius: 50%; 
-                        display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#afc08f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-  <line x1="12" y1="22.08" x2="12" y2="12"></line>
-</svg>
-            </div>
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+  <img src="https://regalchocolate.in/static/images/box.png" 
+       alt="Package" 
+       width="40" 
+       height="40" 
+       style="display: block;">
+</div>
             <h1 style="margin: 0; font-size: 28px; font-weight: 600; color: #2d3748;">Your Order Has Shipped!</h1>
             <p style="margin: 12px 0 0 0; font-size: 16px; color: #4a5568;">Your package is on its way</p>
           </div>
@@ -480,7 +480,7 @@ def build_tracking_email(order_id, tracking_number, carrier="India Post", tracki
 # ----------------------------
 
 def send_tracking(order_id, user_email, tracking_number, tracking_url=None, body=None, session=None):
-    #TODO update the arguments coming from the task service to include a Tracking URL
+    # TODO update the arguments coming from the task service to include a Tracking URL
     """Send tracking email with existing invoice attached."""
 
     # Load the order
