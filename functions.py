@@ -203,14 +203,32 @@ def build_invoice_email(invoice):
           </div>
 
           <!-- Total -->
-          <div style="text-align: right;">
-            <div style="display: inline-block; padding: 16px 24px; border: 1px solid #dee2e6; 
-                        border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background-color: #f8f9fa;">
-              <h5 style="margin: 0; font-size: 18px; font-weight: 400;">
-                Total: <strong style="font-weight: 700;">&#8377;{invoice['total_amount']:.2f}</strong>
-              </h5>
-            </div>
-          </div>
+          <!-- Total -->
+<div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+  <div style="padding: 12px; border: 1px solid #dee2e6; border-radius: 4px; 
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1); background-color: #f8f9fa; min-width: 260px;">
+    <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse: collapse; font-size: 14px;">
+      <tr>
+        <td>Subtotal</td>
+        <td align="right">&#8377;{invoice['subtotal']:.2f}</td>
+      </tr>
+      <tr>
+        <td>Shipping</td>
+        <td align="right">
+          {"<span style='color: green;'>Free</span>" if invoice.get("free_shipping") else f"&#8377;{invoice['shipping']:.2f}"}
+        </td>
+      </tr>
+      <tr>
+        <td>Card fee</td>
+        <td align="right">&#8377;{invoice.get('card_fee', 0):.2f}</td>
+      </tr>
+      <tr style="border-top: 1px solid #dee2e6;">
+        <td><strong>Total</strong></td>
+        <td align="right"><strong>&#8377;{invoice['total']:.2f}</strong></td>
+      </tr>
+    </table>
+  </div>
+</div>
 
         </div>
         <!-- Footer -->
