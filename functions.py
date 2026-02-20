@@ -224,7 +224,7 @@ def build_invoice_email(invoice):
       </tr>
       <tr style="border-top: 1px solid #dee2e6;">
         <td><strong>Total</strong></td>
-        <td align="right"><strong>&#8377;{invoice['total']:.2f}</strong></td>
+        <td align="right"><strong>&#8377;{invoice['grand_total']:.2f}</strong></td>
       </tr>
     </table>
   </div>
